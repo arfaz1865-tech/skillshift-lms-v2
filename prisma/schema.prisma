@@ -1,0 +1,642 @@
+generator client {
+  provider                    = "prisma-client-js"
+  enable_experimental_decimal = "true"
+}
+
+// Is block ke andar bhi line add kar dein:
+generator py_client {
+  provider                    = "prisma-client-py"
+  enable_experimental_decimal = "true"
+  recursive_type_depth        = 5
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Student {
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName             String
+  lastName              String
+  email                 String                 @unique
+  phoneNumber           String?
+  dob                   DateTime?
+  gender                String?
+  country               String?
+  city                  String?
+  bio                   String?
+  profileImage          String?
+  futureGoal            String?
+  accountStatus         String                 @default("active")
+  createdAt             DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime               @default(now()) @updatedAt @db.Timestamptz(6)
+  user_auth_id          String?                @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assignmentSubmissions AssignmentSubmission[]
+  certificates          Certificate[]
+  courseRatings         CourseRating[]
+  enrollments           Enrollment[]
+  lessonComments        LessonComment[]
+  lessonProgress        LessonProgress[]
+  payments              Payment[]
+  invoices              Invoice[]
+  quizAttempts          QuizAttempt[]
+  @@map("students")
+
+}
+
+model Instructor {
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName         String
+  lastName          String
+  email             String                 @unique
+  phoneNumber       String?
+  gender            String?
+  dob               DateTime?              @db.Timestamptz(6)
+  bio               String?
+  profileImage      String?
+  city              String?
+  country           String?
+  accountType       String?
+  accountStatus     String                 @default("active")
+  qualification     String?
+  expertiseArea     String?
+  yearOfExperience  Int?
+  createdAt         DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime               @default(now()) @updatedAt @db.Timestamptz(6)
+  user_auth_id      String?                @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  gradedAssignments AssignmentSubmission[]
+  courses           Course[]
+  @@map("instructors")
+
+}
+
+model Admin {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName     String
+  lastName      String
+  email         String   @unique
+  phoneNumber   String?
+  profileImage  String?
+  accountStatus String   @default("active")
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  user_auth_id  String?  @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  @@map("admins")
+
+}
+
+model Course {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instructorId         String           @db.Uuid
+  title                String
+  slug                 String           @unique
+  shortDescription     String?
+  description          String?
+  thumbnail            String?
+  trailerVideoUrl      String?
+  category             String?
+  subCategory          String?
+  tags                 String[]
+  level                String?
+  language             String?
+  status               CourseStatus     @default(DRAFT)
+  pricingType          PricingType      @default(FREE)
+  price                Decimal          @default(0)
+  discountPrice        Decimal?
+  totalDurationMinutes Int              @default(0)
+  totalLessons         Int              @default(0)
+  totalQuizzes         Int              @default(0)
+  totalAssignments     Int              @default(0)
+  requirements         String[]
+  learningOutcomes     String[]
+  targetAudience       String[]
+  publishedAt          DateTime?        @db.Timestamptz(6)
+  createdAt            DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
+  certificates         Certificate[]
+  modules              Module[]
+  ratings              CourseRating[]
+  instructor           Instructor       @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  enrollments          Enrollment[]
+  lessonProgress       LessonProgress[]
+  Lesson               Lesson[]
+  payments             Payment[]
+  invoices             Invoice[]
+
+  @@index([instructorId])
+  @@map("courses")
+ 
+}
+
+model Module {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId    String   @db.Uuid
+  title       String
+  description String?
+  position    Int
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+
+  @@index([courseId])
+  @@map("courseModules")
+
+}
+
+model Lesson {
+  id                       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId                 String                 @db.Uuid
+  moduleId                 String                 @db.Uuid
+  title                    String
+  content                  String?
+  lessonType               LessonType
+  order                    Int
+  isPreview                Boolean                @default(false)
+  estimatedDurationMinutes Int                    @default(0)
+  videoUrl                 String?
+  videoDurationSeconds     Int?
+  createdAt                DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime               @default(now()) @updatedAt @db.Timestamptz(6)
+  AssignmentSubmission     AssignmentSubmission[]
+  assignment               Assignment?
+  comments                 LessonComment[]
+  lessonProgress           LessonProgress[]
+  course                   Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  module                   Module                 @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  quiz                     Quiz?
+
+  @@index([courseId])
+  @@index([moduleId])
+  @@index([courseId, moduleId, order])
+  @@map("lessons")
+
+}
+
+model Enrollment {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId             String                 @db.Uuid
+  studentId            String                 @db.Uuid
+  completed            Boolean                @default(false)
+  status               EnrollmentStatus       @default(ACTIVE)
+  progressPercentage   Decimal                @default(0)
+  completedLessons     Int                    @default(0)
+  enrolledAt           DateTime               @default(now()) @db.Timestamptz(6)
+  completedAt          DateTime?              @db.Timestamptz(6)
+  createdAt            DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime               @default(now()) @updatedAt @db.Timestamptz(6)
+  AssignmentSubmission AssignmentSubmission[]
+  course               Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student              Student                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonsProgress      LessonProgress[]
+  invoices             Invoice[]
+
+  @@unique([courseId, studentId])
+  @@index([studentId])
+  @@index([courseId])
+  @@map("enrollments")
+
+}
+
+model LessonProgress {
+  id                       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  enrollmentId             String               @db.Uuid
+  studentId                String               @db.Uuid
+  courseId                 String               @db.Uuid
+  lessonId                 String               @db.Uuid
+  status                   LessonProgressStatus @default(NOT_STARTED)
+  progressPercentage       Decimal              @default(0)
+  watchTimeSeconds         Int                  @default(0)
+  lastVideoPositionSeconds Int                  @default(0)
+  completedAt              DateTime?            @db.Timestamptz(6)
+  createdAt                DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime             @default(now()) @updatedAt @db.Timestamptz(6)
+  course                   Course               @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  enrollment               Enrollment           @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson                   Lesson               @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student                  Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@index([enrollmentId])
+  @@index([studentId])
+  @@index([courseId])
+  @@index([lessonId])
+  @@map("lessonProgress")
+
+}
+
+model Quiz {
+  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId           String         @unique @db.Uuid
+  title              String
+  description        String?
+  passingPercentage  Decimal        @default(70)
+  durationMinutes    Int?
+  attemptsAllowed    Int            @default(1)
+  showCorrectAnswers Boolean        @default(true)
+  createdAt          DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime       @default(now()) @updatedAt @db.Timestamptz(6)
+  attempts           QuizAttempt[]
+  questions          QuizQuestion[]
+  lesson             Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@map("quizzes")
+
+}
+
+model QuizQuestion {
+  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quizId       String              @db.Uuid
+  question     String
+  questionType QuestionType
+  marks        Int                 @default(1)
+  position     Int
+  answers      QuizAttemptAnswer[]
+  options      QuizOption[]
+  quiz         Quiz                @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+  @@map("quizQuestions")
+
+}
+
+model QuizOption {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  questionId      String              @db.Uuid
+  optionText      String
+  isCorrect       Boolean             @default(false)
+  selectedAnswers QuizAttemptAnswer[]
+  question        QuizQuestion        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@map("quizOptions")
+
+}
+
+model QuizAttempt {
+  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quizId      String              @db.Uuid
+  studentId   String              @db.Uuid
+  score       Decimal?
+  percentage  Decimal?
+  passed      Boolean             @default(false)
+  startedAt   DateTime            @default(now()) @db.Timestamptz(6)
+  submittedAt DateTime?           @db.Timestamptz(6)
+  createdAt   DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+  answers     QuizAttemptAnswer[]
+  quiz        Quiz                @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  student     Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+  @@index([studentId])
+  @@map("quizAttempts")
+
+}
+
+model QuizAttemptAnswer {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  attemptId        String       @db.Uuid
+  questionId       String       @db.Uuid
+  selectedOptionId String?      @db.Uuid
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime     @default(now()) @updatedAt @db.Timestamptz(6)
+  attempt          QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question         QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption   QuizOption?  @relation(fields: [selectedOptionId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+  @@index([questionId])
+  @@map("quizAttemptAnswers")
+
+}
+
+model Assignment {
+  id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId            String                 @unique @db.Uuid
+  title               String
+  description         String?
+  instructions        String?
+  maxMarks            Int                    @default(100)
+  dueDate             DateTime?              @db.Timestamptz(6)
+  allowLateSubmission Boolean                @default(true)
+  createdAt           DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime               @default(now()) @updatedAt @db.Timestamptz(6)
+  submissions         AssignmentSubmission[]
+  lesson              Lesson                 @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@map("assignments")
+ 
+}
+
+model AssignmentSubmission {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId       String           @db.Uuid
+  enrollmentId   String           @db.Uuid
+  studentId      String           @db.Uuid
+  gradedBy       String?          @db.Uuid
+  answerText     String
+  submissionText String?
+  attachmentUrl  String?
+  submittedAt    DateTime         @default(now()) @db.Timestamptz(6)
+  status         SubmissionStatus @default(SUBMITTED)
+  marks          Decimal?
+  feedback       String?
+  gradedAt       DateTime?        @db.Timestamptz(6)
+  assignmentId   String?          @db.Uuid
+  createdAt      DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
+  Assignment     Assignment?      @relation(fields: [assignmentId], references: [id])
+  enrollment     Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  instructor     Instructor?      @relation(fields: [gradedBy], references: [id])
+  lesson         Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, enrollmentId])
+  @@index([lessonId])
+  @@index([enrollmentId])
+  @@index([studentId])
+  @@map("assignmentSubmissions")
+ 
+}
+
+model CourseRating {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId  String   @db.Uuid
+  studentId String   @db.Uuid
+  rating    Int
+  review    String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, studentId])
+  @@index([courseId])
+  @@index([studentId])
+  @@map("courseRatings")
+ 
+}
+
+model LessonComment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId  String   @db.Uuid
+  studentId String   @db.Uuid
+  comment   String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@index([studentId])
+  @@map("lessonComments")
+ 
+}
+
+model Certificate {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId          String   @db.Uuid
+  studentId         String   @db.Uuid
+  certificateNumber String   @unique
+  certificateUrl    String?
+  issuedAt          DateTime @default(now()) @db.Timestamptz(6)
+  createdAt         DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  course            Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, studentId])
+  @@map("certificates")
+  
+}
+
+model Company {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyName          String
+  companyEmail         String    @unique
+  companyPassword      String
+  phoneNumber          String?
+  companyLogo          String?
+  companyWebsite       String?
+  companyDescription   String?
+  companyLocation      String?
+  city                 String?
+  country              String?
+  companyType          String?
+  industryType         String?
+  companySize          String?
+  visionStatement      String?
+  accountType          String?
+  accountStatus        String    @default("active")
+  regNumber            String?
+  regDate              DateTime? @db.Timestamptz(6)
+  invitationLimit      Int?      @default(0)
+  pendingInvitation    Int?      @default(0)
+  totalInvited         Int       @default(0)
+  activeStudent        Int       @default(0)
+  completedStudent     Int       @default(0)
+  activeCourse         Int       @default(0)
+  completedCourse      Int       @default(0)
+  totalCourseRequested Int       @default(0)
+  subscriptionPlan     String?
+  subscriptionStatus   String?
+  subscriptionStartAt  DateTime? @db.Timestamptz(6)
+  subscriptionEndAt    DateTime? @db.Timestamptz(6)
+  lastLogin            DateTime? @db.Timestamptz(6)
+  passwordLastChange   DateTime? @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("companies")
+  
+}
+
+model Roadmap {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roadmapTitle         String
+  roadmapDescription   String?
+  roadmapStatus        String?
+  courseInProgress     Int?      @default(0)
+  courseCompleted      Int?      @default(0)
+  completionPercent    Float?    @default(0)
+  totalCourse          Int?      @default(0)
+  mandatoryCourse      Int?      @default(0)
+  optionalCourse       Int?      @default(0)
+  prequisiteCourse     Int?      @default(0)
+  courseSequence       String?
+  difficultyLevel      String?
+  estimatedDuration    Int?
+  totalSection         Int?      @default(0)
+  totalLearningHour    Int?      @default(0)
+  startAt              DateTime? @db.Timestamptz(6)
+  expectedCompDate     DateTime? @db.Timestamptz(6)
+  generationDate       DateTime? @db.Timestamptz(6)
+  lastActivityDate     DateTime? @db.Timestamptz(6)
+  lastAiAdjustmentDate DateTime? @db.Timestamptz(6)
+  deletedAt            DateTime? @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("roadmaps")
+
+}
+
+model Resume {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  resumeTitle      String
+  resumeTemplate   String?
+  resumeFilePath   String?
+  fileUrl          String?
+  resumeFormat     String?
+  fileSize         Int?
+  totalPages       Int?
+  templateStyle    String?
+  fontStyle        String?
+  colorSchema      String?
+  layoutStyle      String?
+  generationStatus String?
+  generationDate   DateTime? @db.Timestamptz(6)
+  resumeVersion    Int?      @default(1)
+  resumeScore      Float?
+  resumeStatus     String    @default("active")
+  deletedAt        DateTime? @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("resumes")
+  
+}
+
+model Payment {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId             String    @db.Uuid
+  courseId              String    @db.Uuid
+  amount                Decimal   @default(0)
+  currency              String    @default("usd")
+  paymentMethod         String?
+  stripePaymentIntentId String?   @unique
+  stripeChargeId        String?
+  status                String    @default("pending")
+  createdAt             DateTime  @default(now()) @db.Timestamptz(6)
+  completedAt           DateTime? @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  course                Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student               Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  invoices              Invoice[]
+
+  @@unique([studentId, courseId])
+  @@index([studentId])
+  @@index([courseId])
+  @@index([status])
+  @@map("payments")
+
+}
+
+model Invoice {
+  id                     String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId              String      @db.Uuid
+  courseId               String      @db.Uuid
+  enrollmentId           String?     @db.Uuid
+  paymentId              String?     @db.Uuid
+  invoiceType            String?
+  invoiceStatus          String?
+  invoiceMethod          String?
+  invoiceGateway         String?
+  transactionId          String?
+  gatewayTransactionId   String?
+  invoiceAmount          Float
+  taxAmount              Float?      @default(0)
+  totalAmount            Float
+  discountApplied        Float?      @default(0)
+  discountCode           String?
+  platformCommission     Float?      @default(0)
+  instructorShare        Float?      @default(0)
+  currencyType           String?
+  billingCycle           String?
+  nextBillingDate        DateTime?   @db.Timestamptz(6)
+  cardType               String?
+  cardLastFourDigit      String?
+  deviceInfo             String?
+  ipAddress              String?
+  isSuccessful           Boolean     @default(false)
+  failureReason          String?
+  deletedAt              DateTime?   @db.Timestamptz(6)
+  receiptSent            Boolean     @default(false)
+  receiptSentEmail       String?
+  receiptSentDate        DateTime?   @db.Timestamptz(6)
+  receiptUrl             String?
+  instructorPayoutStatus String?
+  instructorPayoutDate   DateTime?   @db.Timestamptz(6)
+  invoiceDate            DateTime    @default(now()) @db.Timestamptz(6)
+  invoiceCompletedAt     DateTime?   @db.Timestamptz(6)
+  createdAt              DateTime    @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
+  course                 Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student                Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  enrollment             Enrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  payment                Payment?    @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@map("invoices")
+
+}
+
+// ======= ENUMS =======
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+ 
+}
+
+enum PricingType {
+  FREE
+  PAID
+
+  
+}
+
+enum LessonType {
+  VIDEO
+  QUIZ
+  ASSIGNMENT
+
+ 
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+
+
+}
+
+enum LessonProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+
+  
+}
+
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+
+ 
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+
+ 
+}

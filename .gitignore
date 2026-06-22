@@ -1,0 +1,19 @@
+node_modules
+# Keep environment variables out of version control
+.env
+__pycache__
+
+# Python virtual environment
+.venv/
+venv/
+*.pyc
+*.pyo
+*.pyd
+
+# Prisma
+.prisma/
+supabase/.temp
+supabase/.temp/cli-latest
+node_modules/
+package.json
+package-lock.json
